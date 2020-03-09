@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from anytree import NodeMixin, RenderTree
 
 
@@ -16,11 +15,18 @@ class TreeNode(NodeMixin):
         self.break_point = break_point
         self.parent = parent
 
+    def split(self, sample):
+        if not self.is_leaf:
+            if sample[self.feature] <= self.break_point:
+                return self.children[0]
+            else:
+                return self.children[1]
+
     def __repr__(self):
-        if self.feature:
-            fmt = f"Node({self.name}, feature:{self.feature}, breakpoint<=:{self.break_point:.3f}, mse:{self.mse:.3f}, samples:{self.n_samples}, value:{self.value:.3f}"
-        else:
+        if self.is_leaf:
             fmt = f"Node({self.name}, mse:{self.mse:.3f}, samples:{self.n_samples}, value:{self.value:.3f}"
+        else:
+            fmt = f"Node({self.name}, feature:{self.feature}, breakpoint<=:{self.break_point:.3f}, mse:{self.mse:.3f}, samples:{self.n_samples}, value:{self.value:.3f}"
         return fmt
 
 
@@ -28,6 +34,12 @@ class DecisionTree:
     def __init__(self, max_depth=np.Inf):
         self.max_depth = max_depth
         self.root = None
+
+    def __repr__(self):
+        if self.root:
+            return str(RenderTree(self.root))
+        else:
+            return "DecisionTree()"
 
     def fit(self, X, y):
         depth = 0
@@ -78,7 +90,7 @@ class DecisionTree:
     def create_node(self, X, y, name, parent):
         value = np.mean(y)
         error = np.sum((y - value) ** 2)
-        mse = error ** 0.5
+        mse = error / len(y)
         best_feature = None
         lowest_error = np.Inf
         best_break_point = None
@@ -115,10 +127,16 @@ class DecisionTree:
         error_high = np.sum((high - np.mean(high)) ** 2)
         return error_low + error_high
 
+    def predict(self, X):
+        n_samples = X.shape[0]
+        y = np.zeros(n_samples)
+        for i in range(n_samples):
+            y[i] = self.predict_sample(X[i])
+        return y
 
-if __name__ == "__main__":
-    X = np.random.rand(100, 20)
-    y = np.random.rand(100)
-    tree = DecisionTree(max_depth=4)
-    tree.fit(X, y)
-    print(RenderTree(tree.root))
+    def predict_sample(self, sample):
+        node = self.root
+        while not node.is_leaf:
+            node = node.split(sample)
+        return node.value
+
