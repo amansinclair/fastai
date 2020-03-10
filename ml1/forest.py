@@ -67,23 +67,16 @@ class DecisionTree:
                                 self.create_node(samples, labels, name, parent)
                             )
                             new_splits.append((samples, labels))
-
                             node_idx += 1
             nodes = new_nodes
             splits = new_splits
             depth += 1
 
     def split(self, node, X, y):
-        if node.n_samples > 1:
-            break_point = node.break_point
-            feature = node.feature
-            idx_low = np.where(X[:, feature] <= break_point)
-            idx_high = np.where(X[:, feature] > break_point)
-            samples_low = X[idx_low]
-            samples_high = X[idx_high]
-            labels_low = y[idx_low]
-            labels_high = y[idx_high]
-            return [(samples_low, labels_low), (samples_high, labels_high)]
+        if node.n_samples > 1 and node.break_point:
+            idx_low = np.where(X[:, node.feature] <= node.break_point)
+            idx_high = np.where(X[:, node.feature] > node.break_point)
+            return [(X[idx_low], y[idx_low]), (X[idx_high], y[idx_high])]
         else:
             return [(np.array([]), np.array([]))]
 
@@ -118,14 +111,20 @@ class DecisionTree:
         break_points = np.zeros(len(unique) - 1)
         for i in range(len(unique) - 1):
             break_points[i] = (unique[i] + unique[i + 1]) / 2
+        if break_points.size == 0:
+            break_points = [None]
         return break_points
 
-    def evaluate_break_point(self, Xf, y, break_point):
-        low = y[np.where(Xf <= break_point)]
-        high = y[np.where(Xf > break_point)]
-        error_low = np.sum((low - np.mean(low)) ** 2)
-        error_high = np.sum((high - np.mean(high)) ** 2)
-        return error_low + error_high
+    def evaluate_break_point(self, Xf, y, break_point=None):
+        if break_point:
+            low = y[np.where(Xf <= break_point)]
+            high = y[np.where(Xf > break_point)]
+            error_low = np.sum((low - np.mean(low)) ** 2)
+            error_high = np.sum((high - np.mean(high)) ** 2)
+            error = error_low + error_high
+        else:
+            error = np.sum((y - np.mean(Xf)) ** 2)
+        return error
 
     def predict(self, X):
         n_samples = X.shape[0]
@@ -140,3 +139,22 @@ class DecisionTree:
             node = node.split(sample)
         return node.value
 
+
+class RandomForest:
+    def __init__(self, n_trees):
+        self.n_trees = n_trees
+        self.trees = []
+
+    def fit(self, X, y):
+        all_idxs = np.arange(X.shape[0])
+        for i in range(self.n_trees):
+            tree = DecisionTree()
+            sample_idxs = np.random.choice(all_idxs, X.shape[0], replace=True)
+            tree.fit(X[sample_idxs], y[sample_idxs])
+            self.trees.append(tree)
+
+    def predict(self, X):
+        predictions = np.zeros((X.shape[0], self.n_trees))
+        for idx, tree in enumerate(self.trees):
+            predictions[:, idx] = tree.predict(X)
+        return predictions
