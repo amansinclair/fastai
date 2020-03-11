@@ -139,6 +139,17 @@ class DecisionTree:
             node = node.split(sample)
         return node.value
 
+    def get_feature_importance(self, X, y):
+        error = np.mean((y - self.predict(X)) ** 2)
+        n_features = X.shape[1]
+        feature_importances = np.zeros(n_features)
+        for feature in range(n_features):
+            X_temp = X[:, feature]
+            X_shuf = np.random.shuffle(X_temp.copy())
+            X[:, feature] = X_shuf
+            feature_importances[feature] = np.mean((y - self.predict(X)) ** 2) - error
+        return feature_importances / np.sum(feature_importances)
+
 
 class RandomForest:
     def __init__(self, n_trees):
