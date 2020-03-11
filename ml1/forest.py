@@ -34,6 +34,7 @@ class DecisionTree:
     def __init__(self, max_depth=np.Inf):
         self.max_depth = max_depth
         self.root = None
+        self.feature_importance = None
 
     def __repr__(self):
         if self.root:
@@ -71,6 +72,7 @@ class DecisionTree:
             nodes = new_nodes
             splits = new_splits
             depth += 1
+        self.feature_importance = self.get_feature_importance(X, y)
 
     def split(self, node, X, y):
         if node.n_samples > 1 and node.break_point:
