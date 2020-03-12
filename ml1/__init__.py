@@ -1,1 +1,1 @@
-from .forest import DecisionTree
+from .forest import DecisionTree, RandomForest

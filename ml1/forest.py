@@ -150,6 +150,7 @@ class DecisionTree:
             X_shuf = np.random.shuffle(X_temp.copy())
             X[:, feature] = X_shuf
             feature_importances[feature] = np.mean((y - self.predict(X)) ** 2) - error
+            X[:, feature] = X_temp
         return feature_importances / np.sum(feature_importances)
 
 
