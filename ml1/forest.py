@@ -155,20 +155,39 @@ class DecisionTree:
 
 
 class RandomForest:
-    def __init__(self, n_trees):
+    def __init__(self, n_trees, max_samples=0.5):
         self.n_trees = n_trees
+        self.max_samples = max_samples
         self.trees = []
+        self.oob_score = None
 
     def fit(self, X, y):
-        all_idxs = np.arange(X.shape[0])
+        n_samples = X.shape[0]
+        all_idxs = np.arange(n_samples)
+        N_preds = np.zeros(n_samples)
+        preds = np.zeros(n_samples)
         for i in range(self.n_trees):
             tree = DecisionTree()
-            sample_idxs = np.random.choice(all_idxs, X.shape[0], replace=True)
+            sample_idxs = np.random.choice(all_idxs, n_samples, replace=True)
+            if self.max_samples != 1:
+                sample_idxs = sample_idxs[: int(self.max_samples * n_samples)]
+            test_idxs = np.setdiff1d(all_idxs, sample_idxs)
             tree.fit(X[sample_idxs], y[sample_idxs])
+            preds[test_idxs] += tree.predict(X[test_idxs])
+            N_preds[test_idxs] += 1
             self.trees.append(tree)
+        self.oob_score = self.calculate_oob(y, preds, N_preds)
 
     def predict(self, X):
         predictions = np.zeros((X.shape[0], self.n_trees))
         for idx, tree in enumerate(self.trees):
             predictions[:, idx] = tree.predict(X)
         return predictions
+
+    def calculate_oob(self, y, preds, N_preds):
+        mse = np.Inf
+        if np.sum(N_preds) > 0:
+            preds[N_preds > 0] = preds[N_preds > 0] / N_preds[N_preds > 0]
+            mse = np.mean((y[N_preds > 0] - preds[N_preds > 0]) ** 2)
+        return mse
+
