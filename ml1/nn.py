@@ -8,21 +8,17 @@ class Layer:
         self.weight = np.random.rand(output_size, input_size)
         self.bias = np.zeros(output_size)
         self.inputs = None
-        self.batch_size = None
         self.weight_grad = np.zeros((output_size, input_size))
         self.bias_grad = np.zeros(output_size)
 
     def __call__(self, X):
         self.inputs = X.copy()
-        self.batch_size = X.shape[0]
         return np.dot(X, self.weight.T) + self.bias
 
     def backward(self, loss):
         "loss.shape - > batch_size x output_size"
         self.bias_grad = np.mean(loss, axis=0)
-        # for i in range(self.batch_size):
-        # self.weight_grad += loss[i] * self.inputs
-        # self.weight_grad = self.weight_grad / self.batch_size
+        self.weight_grad = np.dot(loss.T, self.inputs) / loss.shape[0]
 
     def update(self, learning_rate):
         self.W += learning_rate * (self.weight_grad)
@@ -73,5 +69,5 @@ if __name__ == "__main__":
     print(my_grad)
     my_net.backward(my_grad)
     print(net[0].weight.grad, net[0].bias.grad)
-    print(my_net.bias_grad)
+    print(my_net.bias_grad, my_net.weight_grad)
 
