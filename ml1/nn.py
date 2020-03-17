@@ -22,11 +22,19 @@ class Sequential:
 
 class Linear:
     def __init__(self, input_size, output_size):
-        self.weight = np.random.rand(output_size, input_size)
+        self.weight, self.bias = self.init_weights(input_size, output_size)
         self.bias = np.zeros(output_size)
         self.inputs = None
         self.weight_grad = np.zeros((output_size, input_size))
         self.bias_grad = np.zeros(output_size)
+
+    def init_weights(self, input_size, output_size):
+        std = 1.0 / (output_size ** 0.5)
+        weight = np.random.uniform(-std, std, input_size * output_size).reshape(
+            output_size, input_size
+        )
+        bias = np.random.uniform(-std, std, output_size)
+        return weight, bias
 
     def __call__(self, X):
         self.inputs = X.copy()
