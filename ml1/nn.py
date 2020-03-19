@@ -19,6 +19,10 @@ class Sequential:
         for layer in reversed(self.layers):
             dloss = layer.backward(dloss)
 
+    def update(self):
+        for layer in self.layers:
+            layer.update()
+
 
 class Linear:
     def __init__(self, input_size, output_size):
@@ -68,6 +72,18 @@ class ReLU:
         return self.input * loss
 
 
+class LogSoftmax:
+    def __call__(self, X):
+        eX = np.exp(X)
+        row_sums = np.sum(eX, axis=0)
+        self.loss = 0
+        return np.log(eX / row_sums)
+
+    def backward(self, loss):
+        """TO DO """
+        return self.loss
+
+
 class MSE:
     def __call__(self, y_pred, y_true):
         self.loss = -2 * (y_true - y_pred)
@@ -77,31 +93,55 @@ class MSE:
         return self.loss
 
 
+def validate(net, X_valid, y_valid, loss_func):
+    preds = net(X_valid)
+    loss = loss_func(preds, y_valid)
+    acc = accuracy(preds, y_valid)
+    return loss, acc
+
+
+def accuracy(preds, y_valid):
+    idxs = np.argmax(preds, axis=1)
+    accuracy = np.sum(idxs == y_valid)
+    return accuracy
+
+
+def step(net, X_batch, y_batch, loss_func):
+    preds = net(X_batch)
+    loss = loss_func(preds, y_batch)
+    acc = accuracy(preds, y_batch)
+    loss_grad = loss_func.backward()
+    net.backward(loss_grad)
+    net.update()
+    return loss, acc
+
+
+def fit(net, X_train, y_train, X_valid, y_valid, loss_func, batch_size=100, n_epochs=1):
+    set_size = X_train.shape[0]
+    idxs = np.arange(set_size)
+    n_batches = set_size // batch_size
+    for epoch in range(n_epochs):
+        np.random.shuffle(idxs)
+        loss = 0
+        acc = 0
+        for batch in range(n_batches):
+            start = batch * batch_size
+            batch_idxs = idxs[start : start + batch_size]
+            X_batch = X_train[batch_idxs]
+            y_batch = y_train[batch_idxs]
+            b_loss, b_acc = step(net, X_batch, y_batch, loss_func)
+            loss += b_loss
+            acc += b_acc
+        loss = loss / n_batches
+        acc = acc / n_batches
+        val_loss, val_acc = validate(net, X_valid, y_valid, loss_func)
+        print(
+            f"{epoch + 1} acc:{acc:.3f}, loss:{loss:.3f}, val_acc:{val_acc:.3f}, val_loss:{val_loss:.3f}"
+        )
+
+
 if __name__ == "__main__":
-    net = nn.Sequential(nn.Linear(3, 2), nn.ReLU(), nn.Linear(2, 1))
-    net.zero_grad()
-    l1 = Linear(3, 2)
-    l1.get_weights(net[0])
-    l2 = Linear(2, 1)
-    l2.get_weights(net[2])
-    X = np.array([[0, 1, 2], [0, 1, 2]], dtype="float32")
-    y = np.array([[0.1], [1.2]], dtype="float32")
-    Xt = torch.Tensor(X)
-    yt = torch.Tensor(y)
-    crit = nn.MSELoss()
-    my_crit = MSE()
-    rl = ReLU()
-    my_net = Sequential(l1, rl, l2)
-    o = net(Xt)
-    my_o = my_net(X)
-    print(o, my_o)
-    loss = crit(yt, o)
-    my_loss = my_crit(y, my_o)
-    print("LOSSES", loss, my_loss)
-    loss.backward()
-    my_grad = my_crit.backward()
-    my_net.backward(my_grad)
-    for i in [0, 2]:
-        print("torch ", net[i].weight.grad, net[i].bias.grad)
-        print("my ", my_net.layers[i].weight_grad, my_net.layers[i].bias_grad)
+    a = np.array([[0.5, 0.2, 0.1], [0.1, 0.1, 0.5]])
+    ls = LogSoftmax()
+    print(ls(a))
 
