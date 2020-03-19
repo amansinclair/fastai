@@ -47,9 +47,9 @@ class Linear:
         loss_return = np.dot(loss, self.weight)
         return loss_return
 
-    def update(self, learning_rate=0.00001):
-        self.weight += learning_rate * (self.weight_grad)
-        self.bias += learning_rate * (self.bias_grad)
+    def update(self, learning_rate=0.01):
+        self.weight -= learning_rate * (self.weight_grad)
+        self.bias -= learning_rate * (self.bias_grad)
 
     def get_weights(self, layer):
         self.weight = layer.weight.data.numpy()
@@ -69,7 +69,7 @@ class ReLU:
 
 
 class MSE:
-    def __call__(self, y_true, y_pred):
+    def __call__(self, y_pred, y_true):
         self.loss = -2 * (y_true - y_pred)
         return np.mean((y_true - y_pred) ** 2)
 
