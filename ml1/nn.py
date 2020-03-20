@@ -75,12 +75,22 @@ class ReLU:
 class LogSoftmax:
     def __call__(self, X):
         eX = np.exp(X)
-        row_sums = np.sum(eX, axis=0)
-        self.loss = 0
-        return np.log(eX / row_sums)
+        row_sums = np.sum(eX, axis=1).reshape(eX.shape[0], 1)
+        self.softmax = eX / row_sums
+        return np.log(self.softmax)
 
     def backward(self, loss):
-        """TO DO """
+        return loss * (1 - self.softmax)
+
+
+class NLLLoss:
+    def __call__(self, y_pred, y_true):
+        self.loss = np.zeros(y_pred.shape)
+        idx = np.arange(y_pred.shape[0])
+        self.loss[idx, y_true] = -1 / y_pred.shape[0]
+        return np.mean(-y_pred[idx, y_true])
+
+    def backward(self, loss=None):
         return self.loss
 
 
@@ -141,7 +151,19 @@ def fit(net, X_train, y_train, X_valid, y_valid, loss_func, batch_size=100, n_ep
 
 
 if __name__ == "__main__":
-    a = np.array([[0.5, 0.2, 0.1], [0.1, 0.1, 0.5]])
-    ls = LogSoftmax()
-    print(ls(a))
-
+    ls = nn.LogSoftmax(dim=1)
+    nlll = nn.NLLLoss()
+    X = torch.tensor([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]])
+    y = torch.tensor([0, 1], dtype=torch.int64)
+    logs = ls(X)
+    print(logs)
+    loss = nlll(logs, y)
+    print(loss)
+    Xn = X.numpy()
+    yn = y.numpy()
+    my_ls = LogSoftmax()
+    my_nlll = NLLLoss()
+    my_logs = my_ls(Xn)
+    print(my_logs)
+    my_loss = my_nlll(my_logs, yn)
+    print(my_loss)
