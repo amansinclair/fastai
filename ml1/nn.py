@@ -80,7 +80,17 @@ class LogSoftmax:
         return np.log(self.softmax)
 
     def backward(self, loss):
-        return loss * (1 - self.softmax)
+        n_batches = self.softmax.shape[0]
+        n_outputs = self.softmax.shape[1]
+        softmax_array = -1 * np.repeat(self.softmax, n_outputs, axis=1).reshape(
+            n_batches, n_outputs, -1
+        )
+        idxs = np.broadcast_to(np.arange(n_outputs), (n_batches, n_outputs)).reshape(
+            n_batches * n_outputs
+        )
+        batch_idxs = np.repeat(np.arange(n_batches), n_outputs)
+        softmax_array[batch_idxs, idxs, idxs] += 1
+        return softmax_array
 
 
 class NLLLoss:
@@ -100,7 +110,7 @@ class MSE:
         return np.mean((y_true - y_pred) ** 2)
 
     def backward(self, loss=None):
-        return self.loss
+        return (self.loss,)
 
 
 def validate(net, X_valid, y_valid, loss_func):
@@ -153,17 +163,20 @@ def fit(net, X_train, y_train, X_valid, y_valid, loss_func, batch_size=100, n_ep
 if __name__ == "__main__":
     ls = nn.LogSoftmax(dim=1)
     nlll = nn.NLLLoss()
-    X = torch.tensor([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]])
+    X = torch.tensor([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]], requires_grad=True)
     y = torch.tensor([0, 1], dtype=torch.int64)
     logs = ls(X)
-    print(logs)
     loss = nlll(logs, y)
-    print(loss)
-    Xn = X.numpy()
-    yn = y.numpy()
+    loss.backward()
+    Xn = X.data.numpy()
+    yn = y.data.numpy()
     my_ls = LogSoftmax()
     my_nlll = NLLLoss()
     my_logs = my_ls(Xn)
-    print(my_logs)
+    print("LOG SOFTMAX", my_logs)
     my_loss = my_nlll(my_logs, yn)
-    print(my_loss)
+    print("GRAD", X.grad)
+    b = my_nlll.backward()
+    print(b)
+    c = my_ls.backward(b)
+    print(c)
