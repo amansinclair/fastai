@@ -90,7 +90,8 @@ class LogSoftmax:
         )
         batch_idxs = np.repeat(np.arange(n_batches), n_outputs)
         softmax_array[batch_idxs, idxs, idxs] += 1
-        return softmax_array
+        sloss = np.repeat(loss, n_outputs, axis=0).reshape(n_batches, n_outputs, -1)
+        return np.sum(softmax_array * sloss, axis=2)
 
 
 class NLLLoss:
@@ -163,8 +164,10 @@ def fit(net, X_train, y_train, X_valid, y_valid, loss_func, batch_size=100, n_ep
 if __name__ == "__main__":
     ls = nn.LogSoftmax(dim=1)
     nlll = nn.NLLLoss()
-    X = torch.tensor([[1.0, 2.0, 3.0], [3.0, 2.0, 1.0]], requires_grad=True)
-    y = torch.tensor([0, 1], dtype=torch.int64)
+    X = torch.tensor(
+        [[1.0, 2.0, 3.0], [3.0, 2.0, 1.0], [1.0, 1.0, 2.0]], requires_grad=True
+    )
+    y = torch.tensor([0, 1, 0], dtype=torch.int64)
     logs = ls(X)
     loss = nlll(logs, y)
     loss.backward()
@@ -173,10 +176,10 @@ if __name__ == "__main__":
     my_ls = LogSoftmax()
     my_nlll = NLLLoss()
     my_logs = my_ls(Xn)
-    print("LOG SOFTMAX", my_logs)
+    # print("LOG SOFTMAX", my_logs)
     my_loss = my_nlll(my_logs, yn)
     print("GRAD", X.grad)
     b = my_nlll.backward()
-    print(b)
+    # print(b)
     c = my_ls.backward(b)
     print(c)
