@@ -51,7 +51,7 @@ class Linear:
         loss_return = np.dot(loss, self.weight)
         return loss_return
 
-    def update(self, learning_rate=0.01):
+    def update(self, learning_rate=0.1):
         self.weight -= learning_rate * (self.weight_grad)
         self.bias -= learning_rate * (self.bias_grad)
 
@@ -70,6 +70,9 @@ class ReLU:
         self.input[self.input > 0] = 1
         self.input[self.input < 0] = 0
         return self.input * loss
+
+    def update(self):
+        pass
 
 
 class LogSoftmax:
@@ -93,6 +96,9 @@ class LogSoftmax:
         sloss = np.repeat(loss, n_outputs, axis=0).reshape(n_batches, n_outputs, -1)
         return np.sum(softmax_array * sloss, axis=2)
 
+    def update(self):
+        pass
+
 
 class NLLLoss:
     def __call__(self, y_pred, y_true):
@@ -107,17 +113,17 @@ class NLLLoss:
 
 class MSE:
     def __call__(self, y_pred, y_true):
-        self.loss = -2 * (y_true - y_pred)
+        self.loss = -2 * (y_true - y_pred) / y_pred.shape[0]
         return np.mean((y_true - y_pred) ** 2)
 
     def backward(self, loss=None):
-        return (self.loss,)
+        return self.loss
 
 
 def validate(net, X_valid, y_valid, loss_func):
     preds = net(X_valid)
     loss = loss_func(preds, y_valid)
-    acc = accuracy(preds, y_valid)
+    acc = accuracy(preds, y_valid) / preds.shape[0]
     return loss, acc
 
 
@@ -154,7 +160,7 @@ def fit(net, X_train, y_train, X_valid, y_valid, loss_func, batch_size=100, n_ep
             loss += b_loss
             acc += b_acc
         loss = loss / n_batches
-        acc = acc / n_batches
+        acc = acc / set_size
         val_loss, val_acc = validate(net, X_valid, y_valid, loss_func)
         print(
             f"{epoch + 1} acc:{acc:.3f}, loss:{loss:.3f}, val_acc:{val_acc:.3f}, val_loss:{val_loss:.3f}"

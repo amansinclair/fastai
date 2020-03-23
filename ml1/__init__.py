@@ -1,2 +1,2 @@
 from .forest import DecisionTree, RandomForest
-from .nn import Linear, Sequential, MSE, fit, LogSoftmax
+from .nn import Linear, Sequential, fit, LogSoftmax, NLLLoss, ReLU
